@@ -1,1 +1,7 @@
+# since I'm always applying patches locally
 config.h
+
+# compilation entities
+*.o
+dwm
+
