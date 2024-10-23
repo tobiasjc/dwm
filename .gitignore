@@ -1,5 +1,5 @@
 # since I'm always applying patches locally
-config.def.h
+config.c
 
 # compilation entities
 *.o
