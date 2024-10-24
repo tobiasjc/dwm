@@ -161,13 +161,6 @@ struct Systray {
 	Client *icons;
 };
 
-typedef struct {
-	int y;
-	int show;
-	Window win;
-	char text[256];
-} Bar;
-
 /* function declarations */
 static void applyrules(Client *c);
 static int applysizehints(Client *c, int *x, int *y, int *w, int *h, int interact);
@@ -245,7 +238,6 @@ static void tag(const Arg *arg);
 static void tagmon(const Arg *arg);
 static void tile(Monitor *m);
 static void togglebar(const Arg *arg);
-static void toggleextrabar(const Arg *arg);
 static void togglefloating(const Arg *arg);
 static void toggletag(const Arg *arg);
 static void toggleview(const Arg *arg);
@@ -309,7 +301,6 @@ static Display *dpy;
 static Drw *drw;
 static Monitor *mons, *selmon;
 static Window root, wmcheckwin;
-static Bar eb;
 
 /* configuration, allows nested code to access above variables */
 #include "config.h"
@@ -525,8 +516,6 @@ cleanup(void)
 		while (m->stack)
 			unmanage(m->stack, 0);
 	XUngrabKey(dpy, AnyKey, AnyModifier, root);
-	XUnmapWindow(dpy, eb.win);
-	XDestroyWindow(dpy, eb.win);
 	while (mons)
 		cleanupmon(mons);
 
@@ -673,7 +662,6 @@ configurenotify(XEvent *e)
 						resizeclient(c, m->mx, m->my, m->mw, m->mh);
 				resizebarwin(m);
 			}
-			XMoveResizeWindow(dpy, eb.win, mons->wx, eb.y, mons->ww, bh);
 			focus(NULL);
 			arrange(NULL);
 		}
@@ -857,9 +845,6 @@ drawbar(Monitor *m)
 		}
 	}
 	drw_map(drw, m->barwin, 0, 0, m->ww - stw, bh);
-	drw_setscheme(drw, scheme[SchemeNorm]);
-	drw_text(drw, 0, 0, mons->ww, bh, lrpad / 2, eb.text, 0);
-	drw_map(drw, eb.win, 0, 0, mons->ww, bh);
 }
 
 void
@@ -1817,7 +1802,6 @@ setup(void)
 	sh = DisplayHeight(dpy, screen);
 	root = RootWindow(dpy, screen);
 	drw = drw_create(dpy, screen, root, sw, sh);
-	eb.show = extrabar;
 	if (!drw_fontset_create(drw, fonts, LENGTH(fonts)))
 		die("no fonts could be loaded.");
 	lrpad = drw->fonts->h;
@@ -1879,17 +1863,6 @@ setup(void)
 	XSelectInput(dpy, root, wa.event_mask);
 	grabkeys();
 	focus(NULL);
-}
-
-void
-toggleextrabar(const Arg *arg)
-{
-	if(selmon == mons) {
-		eb.show = !eb.show;
-		updatebarpos(selmon);
-		XMoveResizeWindow(dpy, eb.win, selmon->wx, eb.y, selmon->ww, bh);
-		arrange(selmon);
-	}
 }
 
 void
@@ -2135,14 +2108,6 @@ updatebars(void)
 		XMapRaised(dpy, m->barwin);
 		XSetClassHint(dpy, m->barwin, &ch);
 	}
-	if(!eb.win) {
-		eb.win = XCreateWindow(dpy, root, mons->wx, eb.y, mons->ww, bh, 0, DefaultDepth(dpy, screen),
-			       CopyFromParent, DefaultVisual(dpy, screen),
-			       CWOverrideRedirect|CWBackPixmap|CWEventMask, &wa);
-		XDefineCursor(dpy, eb.win, cursor[CurNormal]->cursor);
-		XMapRaised(dpy, eb.win);
-	}
-
 }
 
 void
@@ -2156,13 +2121,6 @@ updatebarpos(Monitor *m)
 		m->wy = m->topbar ? m->wy + bh : m->wy;
 	} else
 		m->by = -bh;
-	if(m == mons && eb.show) {
-		m->wh -= bh;
-		eb.y = topbar ? m->wy + m->wh : m->wy;
-		m->wy = m->topbar ? m->wy : m->wy + bh;
-	}
-	else
-		eb.y = -bh;
 }
 
 void
@@ -2323,22 +2281,10 @@ updatestatus(void)
 	char text[512];
 	if(!gettextprop(root, XA_WM_NAME, text, sizeof(text))) {
  		strcpy(stext, "dwm-"VERSION);
-		eb.text[0] = '\0';
-	}
-	else {
-		char *e = strchr(text, ';');
-		if(e) {
-			*e = '\0'; e++;
-			strncpy(eb.text, e, sizeof(eb.text)-1);
-		}
-		else
-			eb.text[0] = '\0';
-		strncpy(stext, text, sizeof(stext)-1);
 	}
 	drawbar(selmon);
 	updatesystray();
 }
-
 
 void
 updatesystrayicongeom(Client *i, int w, int h)
