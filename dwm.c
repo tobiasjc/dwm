@@ -2291,8 +2291,7 @@ updatesizehints(Client *c)
 void
 updatestatus(void)
 {
-	char text[512];
-	if(!gettextprop(root, XA_WM_NAME, text, sizeof(text))) {
+	if(!gettextprop(root, XA_WM_NAME, stext, sizeof(stext))) {
  		strcpy(stext, "dwm-"VERSION);
 	}
 	drawbar(selmon);
